@@ -1,40 +1,47 @@
-import os
-import json
-import sys
 import discord
 from discord.ext import commands
+import json
+import os
+
+CARGO_ID = 1446878840516509868
+ID_FILE = "id.json"
 
 intents = discord.Intents.default()
-intents.message_content = True
 intents.members = True
+intents.message_content = True
 
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+def load_id():
+    if os.path.exists(ID_FILE):
+        with open(ID_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_id(data):
+    with open(ID_FILE, "w") as f:
+        json.dump(data, f)
 
 @bot.event
 async def on_ready():
-    print(f"Bot conectado como {bot.user}!")
+    print(f"Bot está online como {bot.user}")
 
 @bot.command()
-async def ping(ctx):
-    await ctx.send("Pong!")
+async def setid(ctx, *, texto):
+    if CARGO_ID in [role.id for role in ctx.author.roles]:
+        data = load_id()
+        data[str(ctx.author.id)] = texto
+        save_id(data)
+        await ctx.send("ID salvo com sucesso!")
+    else:
+        await ctx.send("Você não tem permissão para usar este comando.")
 
-def get_token():
-    token = os.getenv("TOKEN")
-    if token:
-        return token
+@bot.command()
+async def getid(ctx, membro: discord.Member = None):
+    membro = membro or ctx.author
+    data = load_id()
+    texto = data.get(str(membro.id), "Nenhum ID salvo.")
+    await ctx.send(texto)
 
-    try:
-        with open("id.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data.get("TOKEN")
-    except:
-        return None
-
-if __name__ == "__main__":
-    token = get_token()
-
-    if not token:
-        print("ERRO: Nenhum token encontrado.")
-        sys.exit(1)
-
-    bot.run(token)
+TOKEN = os.getenv("TOKEN")
+bot.run(TOKEN)
